@@ -31,9 +31,9 @@ function ConnectionDot({ state }: { state: ConnectionState }) {
     idle:       '',
   };
   const labels: Record<ConnectionState, string> = {
-    connecting: 'Connecting…',
+    connecting: 'Connecting',
     connected:  'Live',
-    error:      'Reconnecting…',
+    error:      'Reconnecting',
     idle:       '',
   };
   return (
@@ -46,9 +46,9 @@ function ConnectionDot({ state }: { state: ConnectionState }) {
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl mb-3 border border-border-card bg-bg-card p-4">
+    <div className="rounded-lg mb-2.5 border border-border-card bg-bg-card p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-5 h-5 skeleton rounded" />
+        <div className="w-1.5 h-1.5 skeleton rounded-full" />
         <div className="w-16 h-3 skeleton rounded" />
         <div className="ml-auto w-8 h-3 skeleton rounded" />
       </div>
@@ -151,9 +151,6 @@ export default function CommentaryFeed({
         role="status"
         aria-label="Waiting for match events"
       >
-        <div className="w-16 h-16 rounded-full bg-bg-card border border-border-card flex items-center justify-center mb-4">
-          <span className="text-2xl" aria-hidden="true">⏳</span>
-        </div>
         <p className="text-sm font-medium text-text-secondary">Waiting for match events</p>
         <p className="text-xs mt-1">Commentary will appear here when the match starts</p>
       </div>

@@ -31,17 +31,12 @@ interface SSECommentaryEvent {
 function LoadingSkeleton() {
   return (
     <div className="min-h-screen bg-bg-primary">
-      {/* Header skeleton */}
       <div className="bg-bg-card border-b border-border-subtle px-4 py-3.5">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 skeleton rounded" />
-            <div className="w-32 h-5 skeleton rounded" />
-          </div>
+          <div className="w-32 h-5 skeleton rounded" />
           <div className="w-48 h-8 skeleton rounded-lg" />
         </div>
       </div>
-      {/* Scoreboard skeleton */}
       <div className="bg-bg-card border-b border-border-subtle px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-center gap-6">
           <div className="flex-1 flex justify-end">
@@ -56,12 +51,11 @@ function LoadingSkeleton() {
           </div>
         </div>
       </div>
-      {/* Cards skeleton */}
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border border-border-card bg-bg-card p-4">
+          <div key={i} className="rounded-lg border border-border-card bg-bg-card p-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-5 h-5 skeleton rounded" />
+              <div className="w-1.5 h-1.5 skeleton rounded-full" />
               <div className="w-16 h-3 skeleton rounded" />
               <div className="ml-auto w-8 h-3 skeleton rounded" />
             </div>
@@ -79,37 +73,8 @@ function LoadingSkeleton() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-text-muted animate-slide-up" role="status">
-      <div className="w-20 h-20 rounded-full bg-bg-card border border-border-card flex items-center justify-center mb-5">
-        <span className="text-4xl" aria-hidden="true">🏟️</span>
-      </div>
       <p className="text-base font-semibold text-text-secondary mb-1">No matches today</p>
       <p className="text-sm">Check back before the next fixture.</p>
-    </div>
-  );
-}
-
-function SetupBanner() {
-  const [visible, setVisible] = useState(true);
-  if (!visible) return null;
-  return (
-    <div className="max-w-2xl mx-auto mt-4 mx-4 px-4">
-      <div className="rounded-xl bg-accent-pulse/8 border border-accent-pulse/20 px-4 py-3 flex items-start gap-3">
-        <span className="text-accent-pulse mt-0.5 shrink-0" aria-hidden="true">ℹ️</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-text-secondary leading-relaxed">
-            <span className="font-semibold text-text-primary">Setup required</span> — Connect your Supabase database to see live matches.
-            Set <code className="text-xs bg-white/8 px-1.5 py-0.5 rounded font-mono text-accent-pulse">SUPABASE_URL</code> and{' '}
-            <code className="text-xs bg-white/8 px-1.5 py-0.5 rounded font-mono text-accent-pulse">SUPABASE_SERVICE_ROLE_KEY</code> in Secrets.
-          </p>
-        </div>
-        <button
-          onClick={() => setVisible(false)}
-          className="text-text-muted hover:text-text-primary text-lg leading-none shrink-0 -mt-0.5"
-          aria-label="Dismiss"
-        >
-          ×
-        </button>
-      </div>
     </div>
   );
 }
@@ -125,11 +90,9 @@ export default function HomePage() {
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-    // Check demo mode
     fetch(`${base}/api/demo`).then(r => r.json()).then((d: { demo?: boolean }) => {
       if (d.demo) setDemoMode(true);
     }).catch(() => {});
-    // Load matches
     fetch(`${base}/api/matches`)
       .then((r) => {
         if (!r.ok) throw new Error('API error');
@@ -151,24 +114,19 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
-      {/* Header */}
       <header
         className="border-b border-border-subtle"
         style={{ background: 'rgba(19, 22, 31, 0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 20 }}
         role="banner"
       >
         <div className="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-accent-pulse/15 flex items-center justify-center text-sm" aria-hidden="true">
-              🏆
-            </div>
-            <span className="font-bold text-text-primary tracking-tight">MatchCast AI</span>
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full bg-accent-gold/10 text-accent-gold text-xs font-medium">
-              World Cup 2026
-            </span>
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-text-primary tracking-tight text-base">MatchCast</span>
+            <span className="text-border-subtle">|</span>
+            <span className="text-text-muted text-xs font-medium tracking-wide uppercase">AI Commentary</span>
             {demoMode && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent-pulse/10 text-accent-pulse text-xs font-semibold border border-accent-pulse/20">
-                DEMO
+              <span className="px-2 py-0.5 rounded text-xs font-semibold text-text-muted border border-border-card">
+                demo
               </span>
             )}
           </div>
@@ -176,16 +134,22 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Match selector */}
       <MatchSelector
         matches={matches}
         activeMatchId={activeMatchId}
         onSelect={setActiveMatchId}
       />
 
-      {/* Main content */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 pb-8" id="main-content">
-        {apiError && <SetupBanner />}
+        {apiError && (
+          <div className="mt-4 rounded-lg border border-border-card bg-bg-card px-4 py-3">
+            <p className="text-sm text-text-secondary">
+              <span className="font-semibold text-text-primary">Database not connected.</span>{' '}
+              Set <code className="text-xs bg-white/8 px-1.5 py-0.5 rounded font-mono text-accent-pulse">SUPABASE_URL</code> and{' '}
+              <code className="text-xs bg-white/8 px-1.5 py-0.5 rounded font-mono text-accent-pulse">SUPABASE_SERVICE_ROLE_KEY</code> in Secrets to load live data.
+            </p>
+          </div>
+        )}
 
         {activeMatch ? (
           <>
@@ -197,7 +161,6 @@ export default function HomePage() {
               status={activeMatch.status}
               matchId={activeMatch.id}
             />
-
             <div id="commentary-feed" role="region" aria-label="Commentary feed">
               <CommentaryFeed
                 matchId={activeMatchId}
@@ -215,24 +178,14 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* Footer */}
       <footer
         className="border-t border-border-subtle py-4 px-4 text-center"
         style={{ background: 'rgba(19, 22, 31, 0.8)' }}
         role="contentinfo"
       >
-        <a
-          href="https://t.me/MatchCastBot"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text-primary transition-colors"
-          aria-label="Get MatchCast AI on Telegram"
-        >
-          <span aria-hidden="true">📲</span>
-          <span>Get live commentary on Telegram</span>
-          <span className="font-medium text-accent-pulse">@MatchCastBot</span>
-          <span className="text-text-muted" aria-hidden="true">→</span>
-        </a>
+        <span className="text-xs text-text-muted">
+          Built by Anadi &mdash; real-time football commentary in Indian languages
+        </span>
       </footer>
     </div>
   );

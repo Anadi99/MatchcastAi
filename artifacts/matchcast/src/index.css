@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Tamil:wght@400;600&family=Noto+Sans+Telugu:wght@400;600&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -19,7 +20,7 @@
   --color-border-subtle: rgba(255, 255, 255, 0.06);
   --color-border-card: rgba(255, 255, 255, 0.08);
 
-  --font-sans: 'Inter', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', sans-serif;
+  --font-sans: 'Space Grotesk', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', sans-serif;
 
   --text-xs: 0.75rem;
   --text-xs--line-height: calc(1 / 0.75);

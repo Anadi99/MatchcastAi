@@ -10,26 +10,26 @@ interface CommentaryCardProps {
   isNew?: boolean;
 }
 
-const EVENT_META: Record<string, { icon: string; label: string; accent: string }> = {
-  goal:         { icon: '⚽', label: 'Goal',         accent: 'goal' },
-  card:         { icon: '🟨', label: 'Yellow Card',  accent: 'card' },
-  yellow_card:  { icon: '🟨', label: 'Yellow Card',  accent: 'card' },
-  redcard:      { icon: '🟥', label: 'Red Card',     accent: 'redcard' },
-  red_card:     { icon: '🟥', label: 'Red Card',     accent: 'redcard' },
-  subst:        { icon: '🔄', label: 'Substitution', accent: 'subst' },
-  substitution: { icon: '🔄', label: 'Substitution', accent: 'subst' },
-  var:          { icon: '🖥️', label: 'VAR Review',   accent: 'var' },
-  kickoff:      { icon: '🏁', label: 'Kick Off',     accent: 'pulse' },
-  half_time:    { icon: '🔔', label: 'Half Time',    accent: 'summary' },
-  full_time:    { icon: '🏆', label: 'Full Time',    accent: 'summary' },
-  pulse:        { icon: '⏱️', label: 'Update',       accent: 'pulse' },
-  commentary:   { icon: '💬', label: 'Commentary',   accent: 'default' },
-  summary:      { icon: '📋', label: 'Summary',      accent: 'summary' },
-  sponsor:      { icon: '💡', label: 'Sponsored',    accent: 'sponsor' },
+const EVENT_CONFIG: Record<string, { dot: string; label: string }> = {
+  goal:         { dot: '#F59E0B', label: 'Goal' },
+  card:         { dot: '#FBBF24', label: 'Yellow Card' },
+  yellow_card:  { dot: '#FBBF24', label: 'Yellow Card' },
+  redcard:      { dot: '#EF4444', label: 'Red Card' },
+  red_card:     { dot: '#EF4444', label: 'Red Card' },
+  subst:        { dot: '#3B82F6', label: 'Substitution' },
+  substitution: { dot: '#3B82F6', label: 'Substitution' },
+  var:          { dot: '#8B5CF6', label: 'VAR' },
+  kickoff:      { dot: '#22C55E', label: 'Kick-off' },
+  half_time:    { dot: '#94A3B8', label: 'Half Time' },
+  full_time:    { dot: '#94A3B8', label: 'Full Time' },
+  commentary:   { dot: '#475569', label: '' },
+  pulse:        { dot: '#475569', label: '' },
+  sponsor:      { dot: '#22C55E', label: 'Sponsored' },
+  summary:      { dot: '#94A3B8', label: '' },
 };
 
-function getEventMeta(eventType: string) {
-  return EVENT_META[eventType.toLowerCase()] ?? { icon: '⚡', label: eventType, accent: 'default' };
+function getConfig(eventType: string) {
+  return EVENT_CONFIG[eventType.toLowerCase()] ?? { dot: '#475569', label: '' };
 }
 
 function formatTimestamp(ts: string): string {
@@ -38,24 +38,6 @@ function formatTimestamp(ts: string): string {
   } catch {
     return '';
   }
-}
-
-function GoalCard({ text, minute, timestamp }: { text: string; minute: number | null; timestamp: string }) {
-  return (
-    <article className="card-enter rounded-xl mb-3 overflow-hidden border border-accent-gold/25 bg-bg-goal">
-      <div className="px-4 pt-3 pb-1 flex items-center gap-2">
-        <span className="text-2xl" aria-hidden="true">⚽</span>
-        <span className="text-accent-gold font-bold text-sm uppercase tracking-widest">Goal!</span>
-        {minute !== null && (
-          <span className="ml-auto text-xs font-bold text-accent-gold tabular-nums">{minute}&apos;</span>
-        )}
-      </div>
-      <p className="px-4 pb-3 text-text-primary text-sm leading-relaxed font-medium">{text}</p>
-      <div className="px-4 pb-2 flex items-center justify-end">
-        <span className="text-xs text-text-muted">{formatTimestamp(timestamp)}</span>
-      </div>
-    </article>
-  );
 }
 
 export default function CommentaryCard({
@@ -67,7 +49,8 @@ export default function CommentaryCard({
   isNew = false,
 }: CommentaryCardProps) {
   const ref = useRef<HTMLElement>(null);
-  const meta = getEventMeta(isSponsor ? 'sponsor' : eventType);
+  const config = getConfig(isSponsor ? 'sponsor' : eventType);
+  const isGoal = eventType === 'goal' && !isSponsor;
 
   useEffect(() => {
     if (isNew && ref.current) {
@@ -75,38 +58,54 @@ export default function CommentaryCard({
     }
   }, [isNew]);
 
-  if (eventType === 'goal' && !isSponsor) {
-    return <GoalCard text={text} minute={minute} timestamp={timestamp} />;
-  }
-
-  const sponsorBg = 'bg-bg-sponsor border-accent-green/15';
-  const defaultBg = 'bg-bg-card border-border-card hover:border-white/12';
-  const borderBg = isSponsor ? sponsorBg : defaultBg;
-
   return (
     <article
       ref={ref}
-      className={`card-enter rounded-xl mb-3 border transition-colors ${borderBg}`}
-      aria-label={`${meta.label}${minute !== null ? ` at minute ${minute}` : ''}`}
+      className={[
+        'card-enter rounded-lg mb-2.5 border transition-colors overflow-hidden',
+        isGoal
+          ? 'border-accent-gold/20 bg-bg-goal'
+          : isSponsor
+          ? 'border-border-card bg-bg-sponsor'
+          : 'border-border-card bg-bg-card hover:border-white/10',
+      ].join(' ')}
+      aria-label={`${config.label || 'Commentary'}${minute !== null ? ` at minute ${minute}` : ''}`}
     >
+      {/* Accent left bar for non-commentary events */}
+      {config.label && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg"
+          style={{ backgroundColor: config.dot, position: 'absolute' }}
+        />
+      )}
       <div className="px-4 pt-3 pb-3">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-base" aria-hidden="true">{meta.icon}</span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-            {meta.label}
-          </span>
-          <div className="flex items-center gap-2 ml-auto">
+          {config.label && (
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: config.dot }}
+              aria-hidden="true"
+            />
+          )}
+          {config.label && (
+            <span className="text-xs font-semibold tracking-wide" style={{ color: config.dot }}>
+              {config.label}
+            </span>
+          )}
+          <div className={`flex items-center gap-2 ${config.label ? 'ml-auto' : 'ml-auto'}`}>
             {minute !== null && (
-              <span className="text-xs font-bold text-text-secondary tabular-nums bg-white/5 px-1.5 py-0.5 rounded">
+              <span className="text-xs font-semibold text-text-secondary tabular-nums">
                 {minute}&apos;
               </span>
             )}
             <span className="text-xs text-text-muted tabular-nums">{formatTimestamp(timestamp)}</span>
           </div>
         </div>
-        <p className="text-text-primary text-sm leading-relaxed">{text}</p>
+        <p className={`text-sm leading-relaxed ${isGoal ? 'text-text-primary font-medium' : 'text-text-primary'}`}>
+          {text}
+        </p>
         {isSponsor && (
-          <p className="mt-2 text-xs text-accent-green/70">Sponsored</p>
+          <p className="mt-1.5 text-xs text-accent-green/60 font-medium">Sponsored</p>
         )}
       </div>
     </article>
