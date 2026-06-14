@@ -11,14 +11,21 @@ interface CommentaryCardProps {
 }
 
 const EVENT_META: Record<string, { icon: string; label: string; accent: string }> = {
-  goal:    { icon: '⚽', label: 'Goal',         accent: 'goal' },
-  card:    { icon: '🟨', label: 'Card',         accent: 'card' },
-  redcard: { icon: '🟥', label: 'Red Card',     accent: 'redcard' },
-  subst:   { icon: '🔄', label: 'Substitution', accent: 'subst' },
-  var:     { icon: '🖥️', label: 'VAR Review',   accent: 'var' },
-  pulse:   { icon: '⏱️', label: 'Update',       accent: 'pulse' },
-  summary: { icon: '📋', label: 'Summary',      accent: 'summary' },
-  sponsor: { icon: '💡', label: 'Sponsored',    accent: 'sponsor' },
+  goal:         { icon: '⚽', label: 'Goal',         accent: 'goal' },
+  card:         { icon: '🟨', label: 'Yellow Card',  accent: 'card' },
+  yellow_card:  { icon: '🟨', label: 'Yellow Card',  accent: 'card' },
+  redcard:      { icon: '🟥', label: 'Red Card',     accent: 'redcard' },
+  red_card:     { icon: '🟥', label: 'Red Card',     accent: 'redcard' },
+  subst:        { icon: '🔄', label: 'Substitution', accent: 'subst' },
+  substitution: { icon: '🔄', label: 'Substitution', accent: 'subst' },
+  var:          { icon: '🖥️', label: 'VAR Review',   accent: 'var' },
+  kickoff:      { icon: '🏁', label: 'Kick Off',     accent: 'pulse' },
+  half_time:    { icon: '🔔', label: 'Half Time',    accent: 'summary' },
+  full_time:    { icon: '🏆', label: 'Full Time',    accent: 'summary' },
+  pulse:        { icon: '⏱️', label: 'Update',       accent: 'pulse' },
+  commentary:   { icon: '💬', label: 'Commentary',   accent: 'default' },
+  summary:      { icon: '📋', label: 'Summary',      accent: 'summary' },
+  sponsor:      { icon: '💡', label: 'Sponsored',    accent: 'sponsor' },
 };
 
 function getEventMeta(eventType: string) {

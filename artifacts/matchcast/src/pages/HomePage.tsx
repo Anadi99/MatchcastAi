@@ -120,10 +120,16 @@ export default function HomePage() {
   const [language, setLanguage] = useState('hi');
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
   const [initialUpdates] = useState<SSECommentaryEvent[]>([]);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    // Check demo mode
+    fetch(`${base}/api/demo`).then(r => r.json()).then((d: { demo?: boolean }) => {
+      if (d.demo) setDemoMode(true);
+    }).catch(() => {});
+    // Load matches
     fetch(`${base}/api/matches`)
       .then((r) => {
         if (!r.ok) throw new Error('API error');
@@ -160,6 +166,11 @@ export default function HomePage() {
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full bg-accent-gold/10 text-accent-gold text-xs font-medium">
               World Cup 2026
             </span>
+            {demoMode && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent-pulse/10 text-accent-pulse text-xs font-semibold border border-accent-pulse/20">
+                DEMO
+              </span>
+            )}
           </div>
           <LanguageToggle language={language} onSelect={setLanguage} />
         </div>

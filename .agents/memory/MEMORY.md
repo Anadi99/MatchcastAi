@@ -1,1 +1,3 @@
-- [MatchCast AI project](matchcast-project.md) — pnpm workspace with web (Vite+React), mobile (Expo), API (Express), Supabase backend; needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY secrets to show match data.
+- [MatchCast AI project](matchcast-project.md) — pnpm workspace with web (Vite+React), mobile (Expo), API (Express), Supabase backend; now ships demo mode so app works without Supabase secrets.
+- [Demo mode pattern](demo-mode.md) — API server detects missing Supabase vars and serves rich World Cup 2026 fixture + commentary data; SSE stream simulates live events every 10s.
+- [Mobile data layer](mobile-data-layer.md) — Mode B: web + mobile both use direct fetch() to Express API, not @workspace/api-client-react hooks. Mobile uses EXPO_PUBLIC_DOMAIN in lib/api.ts.

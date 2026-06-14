@@ -106,13 +106,30 @@ matchcast/
 
 ---
 
+## Demo Mode
+
+**No Supabase credentials? No problem.** The API server ships with a built-in demo mode that serves realistic World Cup 2026 fixture data whenever `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are not set:
+
+| Match | Status | Score |
+|-------|--------|-------|
+| 🇮🇳 India vs Brazil 🇧🇷 | 🔴 LIVE (73') | 1 – 0 |
+| 🇫🇷 France vs England 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | ⏳ Upcoming | – |
+| 🇦🇷 Argentina vs Germany 🇩🇪 | ✅ FT | 2 – 1 |
+
+- Full AI commentary in all 4 languages — Hindi, Tamil, Telugu, Marathi
+- The SSE stream drip-feeds new commentary lines every 10 seconds, simulating a live match
+- A `DEMO` badge appears in the header so you always know which mode is active
+- Swap in Supabase credentials at any time to switch to real live data — zero code changes needed
+
+---
+
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 20+
 - pnpm 10+
-- A [Supabase](https://supabase.com) project
+- Supabase is **optional** — the app works fully in Demo Mode without it
 
 ### 1. Clone and install
 
@@ -205,6 +222,9 @@ Supported `lang` values: `hi` (Hindi), `ta` (Tamil), `te` (Telugu), `mr` (Marath
 
 ### `GET /api/commentary/:matchId?lang=hi&limit=30`
 REST polling endpoint. Returns the last N commentary updates (max 50).
+
+### `GET /api/demo`
+Returns `{"demo":true}` when running without Supabase credentials (demo mode active).
 
 ### `GET /api/healthz`
 Health check. Returns `{"status":"ok"}`.
