@@ -152,4 +152,42 @@ router.get("/stream/:matchId", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/commentary/:matchId — REST polling endpoint for mobile (additive)
+router.get("/commentary/:matchId", async (req: Request, res: Response) => {
+  const { matchId } = req.params;
+  const lang = (req.query["lang"] as string | undefined) ?? "hi";
+  const limit = Math.min(parseInt((req.query["limit"] as string | undefined) ?? "30", 10), 50);
+
+  try {
+    const supabase = getSupabase();
+
+    const { data, error } = await supabase
+      .from("commentary_updates")
+      .select("id, content, event_type, event_minute, language, created_at")
+      .eq("fixture_id", matchId)
+      .eq("language", lang)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    const updates = (data ?? []).map((row: Record<string, unknown>) => ({
+      id: row.id,
+      text: row.content,
+      eventType: row.event_type,
+      minute: row.event_minute ?? null,
+      language: row.language,
+      timestamp: row.created_at,
+    }));
+
+    res.json(updates);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: msg });
+  }
+});
+
 export default router;

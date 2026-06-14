@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/matchcast-mobile/"
+title = "MatchCast AI Mobile"
+version = "1.0.0"
+id = "artifacts/matchcast-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/matchcast-mobile/" ]
+localPort = 24595
+
+[services.development]
+run = "pnpm --filter @workspace/matchcast-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/matchcast-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/matchcast-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "24595"
+BASE_PATH = "/matchcast-mobile/"
