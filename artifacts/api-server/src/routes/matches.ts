@@ -1,25 +1,30 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { createClient } from "@supabase/supabase-js";
+import {
+  getRelevantMatches,
+  getMatchById,
+  getCommentary,
+  pickTemplateSet,
+} from "../worldcup-api.js";
 
 const router: IRouter = Router();
 
 // ---------------------------------------------------------------------------
-// Demo data — World Cup 2026, shown when Supabase env vars are not set
+// Fallback demo data — only used when WC26 API AND Supabase are both offline
 // ---------------------------------------------------------------------------
 
-const NOW = () => new Date().toISOString();
 const minsAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
 
 const DEMO_MATCHES = [
   {
     id: "demo-match-1",
     fixture_id: 1001,
-    home_team: "India",
-    away_team: "Brazil",
-    home_score: 1,
+    home_team: "Mexico",
+    away_team: "South Africa",
+    home_score: 2,
     away_score: 0,
-    status: "live",
-    kickoff_at: minsAgo(73),
+    status: "finished",
+    kickoff_at: minsAgo(200),
   },
   {
     id: "demo-match-2",
@@ -36,10 +41,10 @@ const DEMO_MATCHES = [
     fixture_id: 1003,
     home_team: "Argentina",
     away_team: "Germany",
-    home_score: 2,
-    away_score: 1,
-    status: "finished",
-    kickoff_at: minsAgo(200),
+    home_score: 1,
+    away_score: 0,
+    status: "live",
+    kickoff_at: minsAgo(73),
   },
 ];
 
@@ -48,114 +53,97 @@ type LangCommentary = Record<string, string[]>;
 const DEMO_COMMENTARY: Record<string, LangCommentary> = {
   hi: {
     "demo-match-1": [
-      "73वें मिनट में सुनील छेत्री ने अद्भुत गोल दागा! गेंद बाईं पोस्ट को छूते हुए जाल में समाई। पूरा स्टेडियम उत्साह से गूंज उठा!",
-      "68वें मिनट में ब्राजील के नेमार ने शानदार फ्री-किक ली लेकिन भारतीय गोलकीपर गुरप्रीत ने अद्भुत बचाव किया। क्या रिफ्लेक्स था!",
-      "60वां मिनट — भारत दबाव बना रहा है। अश्विन कुमार ने दाईं तरफ से ड्रिबल करते हुए ब्राजीली डिफेंस को चुनौती दी।",
-      "46वां मिनट — दूसरा हाफ शुरू! दोनों टीमें मैदान पर उतर चुकी हैं। भारत के लिए यह ऐतिहासिक क्वार्टर फाइनल मुकाबला है।",
-      "45वां मिनट + 3 — हाफ टाइम! पहले हाफ में दोनों टीमें बराबर। भारत ने रक्षात्मक रणनीति से ब्राजील को रोका।",
-      "22वां मिनट — ब्राजील का कॉर्नर किक! विनीसियस जूनियर ने हेडर लगाया लेकिन गेंद बार से टकराकर बाहर गई।",
-      "1वां मिनट — किकऑफ! FIFA विश्व कप 2026 का क्वार्टर फाइनल शुरू। India vs Brazil — मुंबई के DY पाटिल स्टेडियम में।",
+      "90वां मिनट — सामना खत्म! Mexico ने South Africa को 2-0 से हराया। शानदार प्रदर्शन।",
+      "67वें मिनट में Mexico का दूसरा गोल! बेहतरीन काउंटर अटैक।",
+      "9वें मिनट में Mexico ने पहले गोल से बढ़त ली। स्टेडियम में जश्न का माहौल।",
+      "1वां मिनट — किकऑफ! FIFA विश्व कप 2026 ग्रुप A का पहला मैच।",
     ],
     "demo-match-3": [
-      "मेसी का दूसरा गोल! 88वें मिनट में अर्जेंटीना ने मैच जीत लिया। जर्मनी 2-1 से हारा।",
-      "मेसी ने पेनल्टी गोल किया — 68वें मिनट। अर्जेंटीना आगे 1-0।",
-      "जर्मनी का गोल! 45वें मिनट में मुलर ने बराबरी कराई — 1-1।",
-      "अर्जेंटीना का गोल! 12वें मिनट में डि मारिया ने पहला गोल — 1-0।",
+      "73वें मिनट में Argentina का गोल! 1-0 से आगे। जोरदार फिनिश।",
+      "45+2 — हाफ टाइम! दोनों टीमें बराबर। Argentina दबाव बना रहा था।",
+      "1वां मिनट — किकऑफ! Argentina vs Germany — एक क्लासिक विश्व कप मुकाबला।",
     ],
   },
   ta: {
     "demo-match-1": [
-      "73வது நிமிடம்! சுனீல் சேத்ரி அற்புதமான கோல் அடித்தார்! பந்து இடது கோல்போஸ்டை தொட்டு வலையில் சிக்கியது! இந்திய ரசிகர்கள் கூச்சலிட்டனர்!",
-      "68வது நிமிடம் — நெய்மார் சுதந்திர கிக் எடுத்தார், ஆனால் இந்திய கீப்பர் குர்பிரீத் அதிரடி காப்பு காட்டினார்! அற்புதமான ரிஃப்ளக்ஸ்!",
-      "60வது நிமிடம் — இந்தியா தாக்குதல் தீவிரமடைகிறது. அஷ்வின் குமார் வலது பக்கம் டிரிபிள் செய்து பிரேசில் பாதுகாப்பை சவாலுக்கு உட்படுத்தினார்.",
-      "46வது நிமிடம் — இரண்டாம் பாதி தொடங்கியது! இரு அணிகளும் மீண்டும் களத்தில். இந்தியாவிற்கு இது வரலாற்றுசிறப்பு மிக்க காலிறுதி போட்டி.",
-      "45+3வது நிமிடம் — இடைவேளை! முதல் பாதி சமநிலையில் முடிந்தது. இந்தியா தடுப்பாட்டத்தில் சிறந்து விளங்கியது.",
-      "22வது நிமிடம் — பிரேசிலுக்கு கார்னர் கிக். வினீசியஸ் தலையில் அடித்தார், பந்து கிராஸ்பார் தொட்டு வெளியேறியது.",
-      "1வது நிமிடம் — கிக்ஆஃப்! FIFA உலகக்கிண்ணம் 2026 காலிறுதி. India vs Brazil — மும்பையில் DY பாட்டீல் ஸ்டேடியம்.",
+      "90வது நிமிடம் — போட்டி முடிந்தது! Mexico South Africa-ஐ 2-0 தோற்கடித்தது.",
+      "67வது நிமிடம் — Mexico இரண்டாவது கோல். சிறப்பான கவுண்டர் அட்டாக்.",
+      "9வது நிமிடம் — Mexico முதல் கோல் அடித்தது. ஸ்டேடியம் கொண்டாட்டம்.",
+      "1வது நிமிடம் — கிக்ஆஃப்! FIFA உலகக்கிண்ணம் 2026 குழு A முதல் போட்டி.",
     ],
     "demo-match-3": [
-      "மெஸ்ஸி இரண்டாவது கோல்! 88வது நிமிடம் — அர்ஜென்டினா வெற்றி 2-1. ஜெர்மனி தோல்வி.",
-      "மெஸ்ஸி பெனால்டி கோல் — 68வது நிமிடம். அர்ஜென்டினா 1-0 முன்னிலை.",
-      "ஜெர்மனியின் கோல்! 45வது நிமிடம் முல்லர் சமன் செய்தார் — 1-1.",
-      "அர்ஜென்டினாவின் கோல்! 12வது நிமிடம் டி மாரியா முதல் கோல் — 1-0.",
+      "73வது நிமிடம் — Argentina கோல்! 1-0 முன்னிலை.",
+      "45+2 — இடைவேளை! இரு அணிகளும் சமம். Argentina அழுத்தம் கொடுத்தது.",
+      "1வது நிமிடம் — கிக்ஆஃப்! Argentina vs Germany — ஒரு கிளாசிக் போட்டி.",
     ],
   },
   te: {
     "demo-match-1": [
-      "73వ నిమిషం! సునీల్ చెత్రి అద్భుతమైన గోల్ చేశాడు! బంతి ఎడమ పోస్ట్‌ని తాకి వలలో చేరింది! స్టేడియం హర్షోల్లాసంతో నిండిపోయింది!",
-      "68వ నిమిషం — నెయిమార్ ఫ్రీ కిక్ తీసుకున్నాడు, కానీ భారత గోల్‌కీపర్ గుర్‌ప్రీత్ అద్భుతమైన సేవ్ చేశాడు! అద్భుత రిఫ్లెక్స్!",
-      "60వ నిమిషం — భారత్ దాడి తీవ్రతరమవుతోంది. అశ్విన్ కుమార్ కుడి వైపు డ్రిబుల్ చేసి బ్రెజిల్ డిఫెన్స్‌ను సవాలు చేశాడు.",
-      "46వ నిమిషం — రెండవ సగం ప్రారంభం! రెండు జట్లూ మైదానంలోకి వచ్చాయి. భారత్‌కు ఇది చారిత్రాత్మక క్వార్టర్ ఫైనల్.",
-      "45+3 నిమిషం — హాఫ్ టైమ్! మొదటి సగం సమానంగా ముగిసింది. భారత్ రక్షణలో రాణించింది.",
-      "22వ నిమిషం — బ్రెజిల్ కార్నర్ కిక్. వినీషియస్ హెడర్ చేశాడు, బంతి క్రాస్‌బార్ తాకి బయటకు వెళ్ళింది.",
-      "1వ నిమిషం — కిక్‌ఆఫ్! FIFA వరల్డ్ కప్ 2026 క్వార్టర్ ఫైనల్. India vs Brazil — ముంబైలో DY పాటిల్ స్టేడియం.",
+      "90వ నిమిషం — మ్యాచ్ ముగిసింది! Mexico South Africa-ను 2-0తో ఓడించింది.",
+      "67వ నిమిషం — Mexico రెండవ గోల్. అద్భుతమైన కౌంటర్ అటాక్.",
+      "9వ నిమిషం — Mexico మొదటి గోల్ చేసింది. స్టేడియం సంబరాల్లో మునిగింది.",
+      "1వ నిమిషం — కిక్‌ఆఫ్! FIFA వరల్డ్ కప్ 2026 గ్రూప్ A మొదటి మ్యాచ్.",
     ],
     "demo-match-3": [
-      "మెస్సీ రెండవ గోల్! 88వ నిమిషం — అర్జెంటీనా 2-1 గెలిచింది. జర్మనీ ఓడిపోయింది.",
-      "మెస్సీ పెనాల్టీ గోల్ — 68వ నిమిషం. అర్జెంటీనా 1-0 ముందు.",
-      "జర్మనీ గోల్! 45వ నిమిషం మల్లర్ సమానం చేశాడు — 1-1.",
-      "అర్జెంటీనా గోల్! 12వ నిమిషం డి మారియా మొదటి గోల్ — 1-0.",
+      "73వ నిమిషం — Argentina గోల్! 1-0 ముందుంది.",
+      "45+2 — హాఫ్ టైమ్! రెండు జట్లూ సమానం. Argentina ఒత్తిడి తెచ్చింది.",
+      "1వ నిమిషం — కిక్‌ఆఫ్! Argentina vs Germany — ఒక క్లాసిక్ మ్యాచ్.",
     ],
   },
   mr: {
     "demo-match-1": [
-      "73व्या मिनिटाला सुनील छेत्रीने अप्रतिम गोल केला! चेंडू डाव्या पोस्टला स्पर्श करत जाळ्यात शिरला! स्टेडियम जल्लोषाने भरून गेलं!",
-      "68वे मिनिट — नेमारने फ्री किक घेतली, पण भारतीय गोलकीपर गुरप्रीतने अफलातून बचाव केला! काय रिफ्लेक्स होते!",
-      "60वे मिनिट — भारत आक्रमण तीव्र करत आहे. अश्विन कुमारने उजव्या बाजूने ड्रिबल करत ब्राझीलच्या बचावाला आव्हान दिले.",
-      "46वे मिनिट — दुसरा हाफ सुरू! दोन्ही संघ मैदानावर. भारतासाठी हा ऐतिहासिक उपांत्यपूर्व सामना आहे.",
-      "45+3 मिनिट — हाफ टाइम! पहिला अर्धा सामना बरोबरीत संपला. भारताने बचावात उत्तम खेळ केला.",
-      "22वे मिनिट — ब्राझीलचा कॉर्नर किक! विनीसियसने हेड केला, पण चेंडू क्रॉसबारला लागून बाहेर गेला.",
-      "1ले मिनिट — किकऑफ! FIFA विश्वचषक 2026 उपांत्यपूर्व फेरी. India vs Brazil — मुंबईत DY पाटील स्टेडियम.",
+      "90वे मिनिट — सामना संपला! Mexico ने South Africa ला 2-0 ने हरवले.",
+      "67वे मिनिट — Mexico चा दुसरा गोल. अफलातून काउंटर अटॅक.",
+      "9वे मिनिट — Mexico ने पहिला गोल केला. स्टेडियम जल्लोषाने भरले.",
+      "1ले मिनिट — किकऑफ! FIFA विश्वचषक 2026 गट A पहिला सामना.",
     ],
     "demo-match-3": [
-      "मेस्सीचा दुसरा गोल! 88वे मिनिट — अर्जेंटिना विजयी 2-1. जर्मनी पराभूत.",
-      "मेस्सीचा पेनल्टी गोल — 68वे मिनिट. अर्जेंटिना 1-0 पुढे.",
-      "जर्मनीचा गोल! 45वे मिनिट म्युलरने बरोबरी साधली — 1-1.",
-      "अर्जेंटिनाचा गोल! 12वे मिनिट डि मारियाने पहिला गोल — 1-0.",
+      "73वे मिनिट — Argentina चा गोल! 1-0 पुढे.",
+      "45+2 — हाफ टाइम! दोन्ही संघ बरोबर. Argentina दबाव आणत होते.",
+      "1ले मिनिट — किकऑफ! Argentina vs Germany — एक क्लासिक सामना.",
     ],
   },
 };
 
-const LIVE_STREAM_LINES: Record<string, Record<string, { text: string; eventType: string; minute: number | null }[]>> = {
-  hi: {
-    "demo-match-1": [
-      { text: "74वां मिनट — ब्राजील का खतरनाक हमला! राफिन्हा ने पेनल्टी बॉक्स में घुसकर शॉट लगाया लेकिन गुरप्रीत ने गेंद को कॉर्नर में धकेल दिया।", eventType: "commentary", minute: 74 },
-      { text: "75वां मिनट — भारत का काउंटर अटैक! छेत्री ने गेंद आगे बढ़ाई, अश्विन ने शॉट लगाया — पोस्ट से चूका! क्या मौका था!", eventType: "commentary", minute: 75 },
-      { text: "76वां मिनट — VAR की जांच! ब्राजील ने पेनल्टी के लिए अपील की। रेफरी मॉनिटर देख रहे हैं…", eventType: "commentary", minute: 76 },
-      { text: "78वां मिनट — कोई पेनल्टी नहीं! VAR ने क्लियर किया। भारत की रक्षा सही थी। स्टेडियम में जय हिंद के नारे गूंज रहे हैं!", eventType: "commentary", minute: 78 },
-      { text: "80वां मिनट — ब्राजील का 4-3-3 फॉर्मेशन दबाव बना रहा है। नेमार और विनीसियस का कॉम्बिनेशन खतरनाक है।", eventType: "commentary", minute: 80 },
-    ],
-  },
-  ta: {
-    "demo-match-1": [
-      { text: "74வது நிமிடம் — பிரேசிலின் ஆபத்தான தாக்குதல்! ரஃபினா பெனால்டி பகுதியில் நுழைந்து சுட்டார், ஆனால் குர்பிரீத் கார்னருக்கு தள்ளினார்.", eventType: "commentary", minute: 74 },
-      { text: "75வது நிமிடம் — இந்தியாவின் எதிர்த் தாக்குதல்! சேத்ரி பந்தை முன்னுக்கு அனுப்பினார், அஷ்வின் சுட்டார் — கோல்போஸ்ட் தவறியது! என்ன வாய்ப்பு!", eventType: "commentary", minute: 75 },
-      { text: "76வது நிமிடம் — VAR ஆய்வு! பிரேசில் பெனால்டிக்காக கோரியது. நடுவர் மானிட்டரை பார்க்கிறார்…", eventType: "commentary", minute: 76 },
-      { text: "78வது நிமிடம் — பெனால்டி இல்லை! VAR தெளிவுபடுத்தியது. இந்திய பாதுகாப்பு சரியானது. ஸ்டேடியத்தில் 'ஜய் ஹிந்த்' முழக்கங்கள்!", eventType: "commentary", minute: 78 },
-    ],
-  },
-  te: {
-    "demo-match-1": [
-      { text: "74వ నిమిషం — బ్రెజిల్ ప్రమాదకర దాడి! రఫీన్హా పెనాల్టీ బాక్స్‌లోకి చొచ్చుకొని షాట్ తీశాడు, కానీ గుర్‌ప్రీత్ కార్నర్‌కు నెట్టాడు.", eventType: "commentary", minute: 74 },
-      { text: "75వ నిమిషం — భారత్ కౌంటర్ అటాక్! చెత్రి బంతిని ముందుకు పాస్ చేశాడు, అశ్విన్ షాట్ తీశాడు — పోస్ట్ తప్పింది! ఏం అవకాశం!", eventType: "commentary", minute: 75 },
-      { text: "76వ నిమిషం — VAR తనిఖీ! బ్రెజిల్ పెనాల్టీ కోసం అభ్యర్థించింది. రిఫరీ మానిటర్ చూస్తున్నాడు…", eventType: "commentary", minute: 76 },
-      { text: "78వ నిమిషం — పెనాల్టీ లేదు! VAR క్లియర్ చేసింది. భారత్ రక్షణ సరైనది. స్టేడియంలో జై హింద్ నినాదాలు!", eventType: "commentary", minute: 78 },
-    ],
-  },
-  mr: {
-    "demo-match-1": [
-      { text: "74वे मिनिट — ब्राझीलचा धोकादायक हल्ला! राफिन्हाने पेनल्टी बॉक्समध्ये शिरून शॉट मारला, पण गुरप्रीतने कॉर्नरमध्ये ढकलले.", eventType: "commentary", minute: 74 },
-      { text: "75वे मिनिट — भारताचा काउंटर अटॅक! छेत्रीने चेंडू पुढे ढकलला, अश्विनने शॉट मारला — पोस्टने चुकला! काय संधी!", eventType: "commentary", minute: 75 },
-      { text: "76वे मिनिट — VAR तपासणी! ब्राझीलने पेनल्टीसाठी आव्हान केले. पंच मॉनिटर पाहत आहेत…", eventType: "commentary", minute: 76 },
-      { text: "78वे मिनिट — पेनल्टी नाही! VAR ने स्पष्ट केले. भारताचा बचाव योग्य होता. स्टेडियममध्ये जय हिंद च्या घोषणा!", eventType: "commentary", minute: 78 },
-    ],
-  },
+const LIVE_STREAM_LINES: Record<string, { text: string; eventType: string; minute: number | null }[]> = {
+  hi: [
+    { text: "74वां मिनट — खतरनाक हमला! गोलकीपर ने कॉर्नर में धकेला।", eventType: "commentary", minute: 74 },
+    { text: "75वां मिनट — काउंटर अटैक! शॉट लगाया — पोस्ट से चूका!", eventType: "commentary", minute: 75 },
+    { text: "76वां मिनट — VAR की जांच! रेफरी मॉनिटर देख रहे हैं…", eventType: "var", minute: 76 },
+    { text: "78वां मिनट — कोई पेनल्टी नहीं! VAR ने क्लियर किया। जोरदार बचाव।", eventType: "commentary", minute: 78 },
+    { text: "82वां मिनट — दोनों टीमें जीत के लिए दबाव बना रही हैं।", eventType: "commentary", minute: 82 },
+  ],
+  ta: [
+    { text: "74வது நிமிடம் — ஆபத்தான தாக்குதல்! கீப்பர் கார்னருக்கு தள்ளினார்.", eventType: "commentary", minute: 74 },
+    { text: "75வது நிமிடம் — எதிர்த் தாக்குதல்! சுட்டார் — கோல்போஸ்ட் தவறியது!", eventType: "commentary", minute: 75 },
+    { text: "76வது நிமிடம் — VAR ஆய்வு! நடுவர் மானிட்டரை பார்க்கிறார்.", eventType: "var", minute: 76 },
+    { text: "78வது நிமிடம் — பெனால்டி இல்லை! VAR தெளிவுபடுத்தியது.", eventType: "commentary", minute: 78 },
+    { text: "82வது நிமிடம் — இரு அணிகளும் வெற்றிக்கு முயற்சிக்கின்றன.", eventType: "commentary", minute: 82 },
+  ],
+  te: [
+    { text: "74వ నిమిషం — ప్రమాదకర దాడి! కీపర్ కార్నర్‌కు నెట్టాడు.", eventType: "commentary", minute: 74 },
+    { text: "75వ నిమిషం — కౌంటర్! షాట్ — పోస్ట్ తప్పింది!", eventType: "commentary", minute: 75 },
+    { text: "76వ నిమిషం — VAR తనిఖీ! రిఫరీ మానిటర్ చూస్తున్నాడు.", eventType: "var", minute: 76 },
+    { text: "78వ నిమిషం — పెనాల్టీ లేదు! VAR క్లియర్ చేసింది.", eventType: "commentary", minute: 78 },
+    { text: "82వ నిమిషం — రెండు జట్లూ గెలుపు కోసం పోరాడుతున్నాయి.", eventType: "commentary", minute: 82 },
+  ],
+  mr: [
+    { text: "74वे मिनिट — धोकादायक हल्ला! कीपरने कॉर्नरमध्ये ढकलले.", eventType: "commentary", minute: 74 },
+    { text: "75वे मिनिट — काउंटर! शॉट — पोस्टने चुकला!", eventType: "commentary", minute: 75 },
+    { text: "76वे मिनिट — VAR तपासणी! पंच मॉनिटर पाहत आहेत.", eventType: "var", minute: 76 },
+    { text: "78वे मिनिट — पेनल्टी नाही! VAR ने स्पष्ट केले.", eventType: "commentary", minute: 78 },
+    { text: "82वे मिनिट — दोन्ही संघ विजयासाठी झुंजत आहेत.", eventType: "commentary", minute: 82 },
+  ],
 };
 
-function isDemoMode(): boolean {
+// ---------------------------------------------------------------------------
+// Mode detection
+// ---------------------------------------------------------------------------
+
+function hasSupabase(): boolean {
   const url = process.env["SUPABASE_URL"] ?? process.env["NEXT_PUBLIC_SUPABASE_URL"];
   const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-  return !url || !key;
+  return !!(url && key);
 }
 
 // ---------------------------------------------------------------------------
@@ -177,45 +165,53 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
+const NOW = () => new Date().toISOString();
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
 
 // GET /api/matches
 router.get("/matches", async (_req: Request, res: Response) => {
-  if (isDemoMode()) {
-    // Refresh timestamps so "live" match always looks current
-    const now = Date.now();
-    const live = { ...DEMO_MATCHES[0], kickoff_at: new Date(now - 73 * 60_000).toISOString() };
-    return res.json([live, ...DEMO_MATCHES.slice(1)]);
+  // 1. Supabase (production path)
+  if (hasSupabase()) {
+    try {
+      const supabase = getSupabase();
+      const today = new Date();
+      const start = new Date(today); start.setHours(0, 0, 0, 0);
+      const end   = new Date(today); end.setHours(23, 59, 59, 999);
+      const { data, error } = await supabase
+        .from("matches")
+        .select("id, fixture_id, home_team, away_team, home_score, away_score, status, kickoff_at")
+        .in("status", ["live", "scheduled", "finished"])
+        .gte("kickoff_at", start.toISOString())
+        .lte("kickoff_at", end.toISOString())
+        .order("kickoff_at", { ascending: true });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data ?? []);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      return res.status(500).json({ error: msg });
+    }
   }
 
+  // 2. WC26 API (real match data, no Supabase needed)
   try {
-    const supabase = getSupabase();
-    const today = new Date();
-    const startOfDay = new Date(today); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(today); endOfDay.setHours(23, 59, 59, 999);
-
-    const { data, error } = await supabase
-      .from("matches")
-      .select("id, fixture_id, home_team, away_team, home_score, away_score, status, kickoff_at")
-      .in("status", ["live", "scheduled", "finished"])
-      .gte("kickoff_at", startOfDay.toISOString())
-      .lte("kickoff_at", endOfDay.toISOString())
-      .order("kickoff_at", { ascending: true });
-
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json(data ?? []);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: msg });
+    const matches = await getRelevantMatches();
+    return res.json(matches);
+  } catch {
+    // 3. Offline fallback
+    const now = Date.now();
+    const live = { ...DEMO_MATCHES[2], kickoff_at: new Date(now - 73 * 60_000).toISOString() };
+    return res.json([...DEMO_MATCHES.slice(0, 2), live]);
   }
 });
 
 // GET /api/stream/:matchId — SSE commentary stream
 router.get("/stream/:matchId", async (req: Request, res: Response) => {
   const { matchId } = req.params;
-  const lang = (req.query["lang"] as string | undefined) ?? "hi";
+  const lang = (req.query["lang"] as string) || "hi";
+  const validLang = ["hi", "ta", "te", "mr"].includes(lang) ? lang : "hi";
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -223,181 +219,199 @@ router.get("/stream/:matchId", async (req: Request, res: Response) => {
   res.flushHeaders();
 
   const send = (data: string) => { try { res.write(data); } catch { /* client gone */ } };
+  const sendEvent = (id: string, text: string, eventType: string, minute: number | null, timestamp: string) =>
+    send(`data: ${JSON.stringify({ type: "commentary", update: { id, text, eventType, minute, language: validLang, timestamp } })}\n\n`);
 
-  if (isDemoMode()) {
-    const history = (DEMO_COMMENTARY[lang]?.[matchId] ?? DEMO_COMMENTARY["hi"][matchId] ?? []);
-    let counter = history.length;
+  // --- Supabase path ---
+  if (hasSupabase()) {
+    try {
+      const supabase = getSupabase();
+      const { data: history } = await supabase
+        .from("commentary_updates")
+        .select("id, content, event_type, event_minute, language, created_at")
+        .eq("fixture_id", matchId)
+        .eq("language", validLang)
+        .order("created_at", { ascending: true })
+        .limit(20);
 
-    // Send history in reverse (oldest first)
-    for (let i = history.length - 1; i >= 0; i--) {
-      const text = history[i];
-      send(`data: ${JSON.stringify({
-        type: "commentary",
-        update: {
-          id: `demo-${matchId}-${lang}-${i}`,
-          text,
-          eventType: i === 0 ? "goal" : i === history.length - 1 ? "kickoff" : i === Math.floor(history.length / 2) ? "half_time" : "commentary",
-          minute: i === 0 ? 73 : i === history.length - 1 ? 1 : null,
-          language: lang,
-          timestamp: new Date(Date.now() - (i + 1) * 3 * 60_000).toISOString(),
-        },
-      })}\n\n`);
+      if (history) {
+        for (const row of history) {
+          sendEvent(row.id, row.content, row.event_type, row.event_minute ?? null, row.created_at);
+        }
+      }
+
+      const channel = supabase
+        .channel(`commentary:${matchId}:${validLang}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "commentary_updates", filter: `fixture_id=eq.${matchId}` },
+          // @ts-ignore
+          (payload) => {
+            const row = payload.new;
+            if (row.language === validLang) {
+              sendEvent(row.id, row.content, row.event_type, row.event_minute ?? null, row.created_at);
+            }
+          }
+        )
+        .subscribe();
+
+      const keepalive = setInterval(() => send(": keepalive\n\n"), 30_000);
+      req.on("close", () => { clearInterval(keepalive); void supabase.removeChannel(channel); res.end(); });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      send(`data: ${JSON.stringify({ error: msg })}\n\n`);
+      res.end();
+    }
+    return;
+  }
+
+  // --- WC26 API path (real match, templated commentary) ---
+  if (matchId.startsWith("wc26-")) {
+    let homeTeam = "Home";
+    let awayTeam = "Away";
+    let isFinished = false;
+    let homeScore = 0;
+    let awayScore = 0;
+
+    try {
+      const match = await getMatchById(matchId);
+      if (match) {
+        homeTeam = match.home_team;
+        awayTeam = match.away_team;
+        isFinished = match.status === "finished";
+        homeScore = match.home_score;
+        awayScore = match.away_score;
+      }
+    } catch { /* use defaults */ }
+
+    const tplSet = pickTemplateSet(homeScore, awayScore);
+    const lines = getCommentary(validLang, homeTeam, awayTeam, tplSet);
+
+    // Send history (reversed = oldest first → newest last)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const l = lines[i];
+      sendEvent(
+        `wc26-${matchId}-${validLang}-${i}`,
+        l.text, l.eventType, l.minute,
+        new Date(Date.now() - (i + 1) * 8 * 60_000).toISOString()
+      );
     }
 
-    if (matchId !== "demo-match-1") {
+    if (isFinished) {
       res.end();
       return;
     }
 
-    // For live match: drip-feed new commentary lines every 10 seconds
-    const streamLines = LIVE_STREAM_LINES[lang]?.["demo-match-1"] ?? LIVE_STREAM_LINES["hi"]["demo-match-1"];
+    // Live / scheduled: drip-feed generic lines every 10 seconds
+    const liveLines = LIVE_STREAM_LINES[validLang] ?? LIVE_STREAM_LINES["hi"];
     let streamIdx = 0;
+    let counter = lines.length;
 
     const interval = setInterval(() => {
-      if (streamIdx >= streamLines.length) {
-        // Cycle back to start with updated minute
-        streamIdx = 0;
-        counter += streamLines.length;
-      }
-      const line = streamLines[streamIdx++];
-      send(`data: ${JSON.stringify({
-        type: "commentary",
-        update: {
-          id: `demo-live-${lang}-${counter++}-${Date.now()}`,
-          text: line.text,
-          eventType: line.eventType,
-          minute: line.minute,
-          language: lang,
-          timestamp: NOW(),
-        },
-      })}\n\n`);
+      if (streamIdx >= liveLines.length) streamIdx = 0;
+      const l = liveLines[streamIdx++];
+      const text = l.text
+        .replace(/\{home\}/g, homeTeam)
+        .replace(/\{away\}/g, awayTeam);
+      sendEvent(`wc26-live-${validLang}-${counter++}-${Date.now()}`, text, l.eventType, l.minute, NOW());
     }, 10_000);
 
     const keepalive = setInterval(() => send(": keepalive\n\n"), 30_000);
-
-    req.on("close", () => {
-      clearInterval(interval);
-      clearInterval(keepalive);
-      res.end();
-    });
+    req.on("close", () => { clearInterval(interval); clearInterval(keepalive); res.end(); });
     return;
   }
 
-  // --- Supabase path ---
-  try {
-    const supabase = getSupabase();
+  // --- Fallback demo path ---
+  const history = (DEMO_COMMENTARY[validLang]?.[matchId] ?? DEMO_COMMENTARY["hi"]?.[matchId] ?? []);
+  let counter = history.length;
 
-    const { data: history } = await supabase
-      .from("commentary_updates")
-      .select("id, content, event_type, event_minute, language, created_at")
-      .eq("fixture_id", matchId)
-      .eq("language", lang)
-      .order("created_at", { ascending: true })
-      .limit(20);
-
-    if (history) {
-      for (const row of history) {
-        send(`data: ${JSON.stringify({
-          type: "commentary",
-          update: {
-            id: row.id,
-            text: row.content,
-            eventType: row.event_type,
-            minute: row.event_minute ?? null,
-            language: row.language,
-            timestamp: row.created_at,
-          },
-        })}\n\n`);
-      }
-    }
-
-    const channel = supabase
-      .channel(`commentary:${matchId}:${lang}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "commentary_updates", filter: `fixture_id=eq.${matchId}` },
-        // @ts-ignore
-        (payload) => {
-          const row = payload.new;
-          if (row.language === lang) {
-            send(`data: ${JSON.stringify({
-              type: "commentary",
-              update: {
-                id: row.id,
-                text: row.content,
-                eventType: row.event_type,
-                minute: row.event_minute ?? null,
-                language: row.language,
-                timestamp: row.created_at,
-              },
-            })}\n\n`);
-          }
-        }
-      )
-      .subscribe();
-
-    const keepalive = setInterval(() => send(": keepalive\n\n"), 30_000);
-    req.on("close", () => {
-      clearInterval(keepalive);
-      void supabase.removeChannel(channel);
-      res.end();
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    send(`data: ${JSON.stringify({ error: msg })}\n\n`);
-    res.end();
+  for (let i = history.length - 1; i >= 0; i--) {
+    sendEvent(
+      `demo-${matchId}-${validLang}-${i}`,
+      history[i],
+      i === 0 ? "full_time" : i === history.length - 1 ? "kickoff" : "commentary",
+      null,
+      new Date(Date.now() - (i + 1) * 3 * 60_000).toISOString()
+    );
   }
+
+  if (matchId !== "demo-match-3") {
+    res.end();
+    return;
+  }
+
+  // Live demo match drip-feed
+  const liveLines = LIVE_STREAM_LINES[validLang] ?? LIVE_STREAM_LINES["hi"];
+  let streamIdx = 0;
+  const interval = setInterval(() => {
+    if (streamIdx >= liveLines.length) { streamIdx = 0; counter += liveLines.length; }
+    const l = liveLines[streamIdx++];
+    sendEvent(`demo-live-${validLang}-${counter++}-${Date.now()}`, l.text, l.eventType, l.minute, NOW());
+  }, 10_000);
+
+  const keepalive = setInterval(() => send(": keepalive\n\n"), 30_000);
+  req.on("close", () => { clearInterval(interval); clearInterval(keepalive); res.end(); });
 });
 
 // GET /api/commentary/:matchId — REST polling for mobile
 router.get("/commentary/:matchId", async (req: Request, res: Response) => {
   const { matchId } = req.params;
-  const lang = (req.query["lang"] as string | undefined) ?? "hi";
-  const limit = Math.min(parseInt((req.query["limit"] as string | undefined) ?? "30", 10), 50);
+  const lang = (req.query["lang"] as string) || "hi";
+  const validLang = ["hi", "ta", "te", "mr"].includes(lang) ? lang : "hi";
+  const limit = Math.min(parseInt((req.query["limit"] as string) ?? "30", 10), 50);
 
-  if (isDemoMode()) {
-    const history = (DEMO_COMMENTARY[lang]?.[matchId] ?? DEMO_COMMENTARY["hi"][matchId] ?? []);
-    const updates = history.slice(0, limit).map((text, i) => ({
-      id: `demo-${matchId}-${lang}-${i}`,
-      text,
-      eventType: i === 0 ? "goal" : i === history.length - 1 ? "kickoff" : i === Math.floor(history.length / 2) ? "half_time" : "commentary",
-      minute: i === 0 ? 73 : i === history.length - 1 ? 1 : null,
-      language: lang,
-      timestamp: new Date(Date.now() - (i + 1) * 3 * 60_000).toISOString(),
-    }));
-    return res.json(updates);
+  if (hasSupabase()) {
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from("commentary_updates")
+        .select("id, content, event_type, event_minute, language, created_at")
+        .eq("fixture_id", matchId)
+        .eq("language", validLang)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json((data ?? []).map((row: Record<string, unknown>) => ({
+        id: row.id, text: row.content, eventType: row.event_type,
+        minute: row.event_minute ?? null, language: row.language, timestamp: row.created_at,
+      })));
+    } catch (err) {
+      return res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+    }
   }
 
-  try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from("commentary_updates")
-      .select("id, content, event_type, event_minute, language, created_at")
-      .eq("fixture_id", matchId)
-      .eq("language", lang)
-      .order("created_at", { ascending: false })
-      .limit(limit);
+  // WC26 path
+  if (matchId.startsWith("wc26-")) {
+    let homeTeam = "Home";
+    let awayTeam = "Away";
+    let homeScore = 0;
+    let awayScore = 0;
+    try {
+      const match = await getMatchById(matchId);
+      if (match) { homeTeam = match.home_team; awayTeam = match.away_team; homeScore = match.home_score; awayScore = match.away_score; }
+    } catch { /* defaults */ }
 
-    if (error) return res.status(500).json({ error: error.message });
-
-    const updates = (data ?? []).map((row: Record<string, unknown>) => ({
-      id: row.id,
-      text: row.content,
-      eventType: row.event_type,
-      minute: row.event_minute ?? null,
-      language: row.language,
-      timestamp: row.created_at,
-    }));
-    return res.json(updates);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ error: msg });
+    const lines = getCommentary(validLang, homeTeam, awayTeam, pickTemplateSet(homeScore, awayScore));
+    return res.json(lines.slice(0, limit).map((l, i) => ({
+      id: `wc26-${matchId}-${validLang}-${i}`,
+      text: l.text, eventType: l.eventType, minute: l.minute, language: validLang,
+      timestamp: new Date(Date.now() - (i + 1) * 8 * 60_000).toISOString(),
+    })));
   }
+
+  // Fallback demo
+  const history = (DEMO_COMMENTARY[validLang]?.[matchId] ?? DEMO_COMMENTARY["hi"]?.[matchId] ?? []);
+  return res.json(history.slice(0, limit).map((text, i) => ({
+    id: `demo-${matchId}-${validLang}-${i}`,
+    text,
+    eventType: i === 0 ? "full_time" : i === history.length - 1 ? "kickoff" : "commentary",
+    minute: null,
+    language: validLang,
+    timestamp: new Date(Date.now() - (i + 1) * 3 * 60_000).toISOString(),
+  })));
 });
 
-// GET /api/demo — indicates demo mode status
+// GET /api/demo — mode indicator
 router.get("/demo", (_req: Request, res: Response) => {
-  res.json({ demo: isDemoMode() });
+  res.json({ demo: !hasSupabase() });
 });
 
 export default router;
