@@ -1,53 +1,36 @@
-# MatchCast AI
+# [Project name]
 
-Live football commentary in your language — Hindi, Tamil, Telugu, Marathi. Real-time SSE streaming from Supabase.
+_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
-- `pnpm --filter @workspace/matchcast run dev` — run the frontend (port 22888)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-
-## Required Secrets
-
-| Secret | Description |
-|---|---|
-| `SUPABASE_URL` | Supabase project dashboard URL (any URL containing `/project/<ref>` works) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (Settings → API) |
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
+- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- Frontend: React + Vite + Tailwind CSS v4, wouter routing
-- Backend: Express 5
-- Database: Supabase (Postgres + Realtime)
+- API: Express 5
+- DB: PostgreSQL + Drizzle ORM
+- Validation: Zod (`zod/v4`), `drizzle-zod`
+- API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-- `artifacts/matchcast/` — React + Vite frontend
-- `artifacts/api-server/` — Express backend serving `/api/matches` and `/api/stream/:matchId`
-- `supabase_migration.sql` — Schema migration to run in Supabase SQL Editor
+_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
 
 ## Architecture decisions
 
-- Frontend fetches matches from `/api/matches` on load; uses SSE at `/api/stream/:matchId?lang=<lang>` for real-time commentary
-- SUPABASE_URL is auto-resolved: both dashboard URLs and `https://<ref>.supabase.co` formats work
-- No server-side rendering — fully client-rendered Vite SPA
-- Language selector (Hindi/Tamil/Telugu/Marathi) drives both SSE stream filter and UI
-
-## ⚠️ One-time setup required
-
-The Supabase database schema must be applied once before match data appears:
-
-1. Go to your Supabase project → **SQL Editor**
-2. Open `supabase_migration.sql` from this repo (or paste the contents)
-3. Run it — this creates all tables (matches, commentary_updates, etc.)
+_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
 
 ## Product
 
-Users visit the app to watch live AI-generated football commentary in Indian regional languages. They pick a match from the selector bar, choose their language, and see a real-time commentary feed streamed via SSE from Supabase Realtime. A Telegram bot (@MatchCastBot) delivers the same commentary via push.
+_Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
@@ -55,9 +38,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-- The api-server resolves SUPABASE_URL automatically from dashboard or API URL format
-- Direct Postgres connection to Supabase (`db.*.supabase.co`) is DNS-blocked in this Replit environment — use Supabase REST API or run migrations via SQL Editor
-- Port 8080 (api-server) can get stuck with EADDRINUSE if workflows restart too quickly — wait a few seconds between restarts
+_Populate as you build — sharp edges, "always run X before Y" rules._
 
 ## Pointers
 
