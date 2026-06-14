@@ -12,70 +12,64 @@ interface MatchSelectorProps {
   onSelect: (matchId: string) => void;
 }
 
-function isLive(status: string): boolean {
-  const liveStatuses = ['live', 'LIVE', '1H', '2H', 'ET', 'HT', 'P'];
-  return liveStatuses.includes(status);
+const LIVE_STATUSES = new Set(['live', 'LIVE', '1H', '2H', 'ET', 'HT', 'P']);
+
+function isLive(status: string) {
+  return LIVE_STATUSES.has(status);
 }
 
-export default function MatchSelector({
-  matches,
-  activeMatchId,
-  onSelect,
-}: MatchSelectorProps) {
-  if (matches.length === 0) {
-    return (
-      <div
-        className="px-4 py-3 text-text-muted text-sm text-center"
-        role="status"
-      >
-        No matches available today.
-      </div>
-    );
-  }
+function isFinished(status: string) {
+  return status === 'finished' || status === 'FT';
+}
+
+export default function MatchSelector({ matches, activeMatchId, onSelect }: MatchSelectorProps) {
+  if (matches.length === 0) return null;
 
   return (
     <nav
       aria-label="Match selector"
-      className="bg-bg-card border-b border-white/10"
+      className="border-b border-border-subtle"
+      style={{ background: 'rgba(19, 22, 31, 0.8)', backdropFilter: 'blur(8px)' }}
     >
       <ol
-        className="flex overflow-x-auto scrollbar-none gap-1 px-3 py-2"
+        className="flex overflow-x-auto scrollbar-none gap-1.5 px-4 py-2.5"
         role="tablist"
         aria-label="Available matches"
       >
         {matches.map((match) => {
           const isActive = match.id === activeMatchId;
           const live = isLive(match.status);
+          const finished = isFinished(match.status);
 
           return (
-            <li key={match.id} role="presentation">
+            <li key={match.id} role="presentation" className="shrink-0">
               <button
                 role="tab"
                 aria-selected={isActive}
                 aria-controls="commentary-feed"
                 onClick={() => onSelect(match.id)}
                 className={[
-                  'flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  'flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
                   isActive
-                    ? 'bg-accent-pulse text-white'
-                    : 'text-text-muted hover:text-text-primary hover:bg-white/5',
+                    ? 'bg-accent-pulse text-white shadow-sm'
+                    : finished
+                    ? 'text-text-muted hover:text-text-secondary hover:bg-white/5'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-white/6',
                 ].join(' ')}
               >
                 {live && (
-                  <span
-                    className="text-accent-live text-xs"
-                    aria-label="Live match"
-                  >
-                    🔴
-                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-live live-pulse shrink-0" aria-label="Live" />
                 )}
                 <span>
-                  {match.home_team} vs {match.away_team}
+                  {match.home_team} <span className="opacity-50">vs</span> {match.away_team}
                 </span>
                 {live && (
-                  <span className="text-xs bg-accent-live/20 text-accent-live px-1.5 py-0.5 rounded font-bold">
+                  <span className={`text-xs font-bold tracking-wider shrink-0 ${isActive ? 'text-white/80' : 'text-accent-live'}`}>
                     LIVE
                   </span>
+                )}
+                {finished && (
+                  <span className={`text-xs shrink-0 ${isActive ? 'text-white/60' : 'text-text-muted'}`}>FT</span>
                 )}
               </button>
             </li>

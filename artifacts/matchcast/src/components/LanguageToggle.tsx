@@ -5,10 +5,10 @@ interface LanguageOption {
 }
 
 const LANGUAGES: LanguageOption[] = [
-  { code: 'hi', label: 'हिंदी', ariaLabel: 'Hindi' },
-  { code: 'ta', label: 'தமிழ்', ariaLabel: 'Tamil' },
+  { code: 'hi', label: 'हिंदी',   ariaLabel: 'Hindi' },
+  { code: 'ta', label: 'தமிழ்',  ariaLabel: 'Tamil' },
   { code: 'te', label: 'తెలుగు', ariaLabel: 'Telugu' },
-  { code: 'mr', label: 'मराठी', ariaLabel: 'Marathi' },
+  { code: 'mr', label: 'मराठी',  ariaLabel: 'Marathi' },
 ];
 
 interface LanguageToggleProps {
@@ -16,19 +16,15 @@ interface LanguageToggleProps {
   onSelect: (lang: string) => void;
 }
 
-export default function LanguageToggle({
-  language,
-  onSelect,
-}: LanguageToggleProps) {
+export default function LanguageToggle({ language, onSelect }: LanguageToggleProps) {
   return (
     <div
       role="group"
       aria-label="Select commentary language"
-      className="flex items-center gap-1"
+      className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5"
     >
       {LANGUAGES.map((lang) => {
         const isActive = lang.code === language;
-
         return (
           <button
             key={lang.code}
@@ -36,10 +32,10 @@ export default function LanguageToggle({
             aria-pressed={isActive}
             aria-label={`Switch to ${lang.ariaLabel} commentary`}
             className={[
-              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              'px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150',
               isActive
-                ? 'bg-accent-pulse text-white'
-                : 'text-text-muted hover:text-text-primary hover:bg-white/10',
+                ? 'bg-accent-pulse text-white shadow-sm'
+                : 'text-text-muted hover:text-text-primary',
             ].join(' ')}
           >
             {lang.label}

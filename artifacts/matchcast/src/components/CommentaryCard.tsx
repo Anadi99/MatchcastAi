@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 interface CommentaryCardProps {
   id: string;
   text: string;
@@ -5,25 +7,48 @@ interface CommentaryCardProps {
   minute: number | null;
   timestamp: string;
   isSponsor?: boolean;
+  isNew?: boolean;
 }
 
-function getEventIcon(eventType: string): string {
-  switch (eventType) {
-    case 'goal':
-      return '⚽';
-    case 'card':
-      return '🟨';
-    case 'subst':
-      return '🔄';
-    case 'var':
-      return '🖥️';
-    case 'pulse':
-      return '⏱️';
-    case 'summary':
-      return '📋';
-    default:
-      return '⚡';
+const EVENT_META: Record<string, { icon: string; label: string; accent: string }> = {
+  goal:    { icon: '⚽', label: 'Goal',         accent: 'goal' },
+  card:    { icon: '🟨', label: 'Card',         accent: 'card' },
+  redcard: { icon: '🟥', label: 'Red Card',     accent: 'redcard' },
+  subst:   { icon: '🔄', label: 'Substitution', accent: 'subst' },
+  var:     { icon: '🖥️', label: 'VAR Review',   accent: 'var' },
+  pulse:   { icon: '⏱️', label: 'Update',       accent: 'pulse' },
+  summary: { icon: '📋', label: 'Summary',      accent: 'summary' },
+  sponsor: { icon: '💡', label: 'Sponsored',    accent: 'sponsor' },
+};
+
+function getEventMeta(eventType: string) {
+  return EVENT_META[eventType.toLowerCase()] ?? { icon: '⚡', label: eventType, accent: 'default' };
+}
+
+function formatTimestamp(ts: string): string {
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
   }
+}
+
+function GoalCard({ text, minute, timestamp }: { text: string; minute: number | null; timestamp: string }) {
+  return (
+    <article className="card-enter rounded-xl mb-3 overflow-hidden border border-accent-gold/25 bg-bg-goal">
+      <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+        <span className="text-2xl" aria-hidden="true">⚽</span>
+        <span className="text-accent-gold font-bold text-sm uppercase tracking-widest">Goal!</span>
+        {minute !== null && (
+          <span className="ml-auto text-xs font-bold text-accent-gold tabular-nums">{minute}&apos;</span>
+        )}
+      </div>
+      <p className="px-4 pb-3 text-text-primary text-sm leading-relaxed font-medium">{text}</p>
+      <div className="px-4 pb-2 flex items-center justify-end">
+        <span className="text-xs text-text-muted">{formatTimestamp(timestamp)}</span>
+      </div>
+    </article>
+  );
 }
 
 export default function CommentaryCard({
@@ -32,49 +57,51 @@ export default function CommentaryCard({
   minute,
   timestamp,
   isSponsor = false,
+  isNew = false,
 }: CommentaryCardProps) {
-  const icon = getEventIcon(eventType);
-  const bgClass = isSponsor ? 'bg-bg-sponsor' : 'bg-bg-card';
-  const label = `${eventType}${minute !== null ? ` at minute ${minute}` : ''}`;
+  const ref = useRef<HTMLElement>(null);
+  const meta = getEventMeta(isSponsor ? 'sponsor' : eventType);
+
+  useEffect(() => {
+    if (isNew && ref.current) {
+      ref.current.classList.add('card-enter');
+    }
+  }, [isNew]);
+
+  if (eventType === 'goal' && !isSponsor) {
+    return <GoalCard text={text} minute={minute} timestamp={timestamp} />;
+  }
+
+  const sponsorBg = 'bg-bg-sponsor border-accent-green/15';
+  const defaultBg = 'bg-bg-card border-border-card hover:border-white/12';
+  const borderBg = isSponsor ? sponsorBg : defaultBg;
 
   return (
     <article
-      role="article"
-      aria-label={label}
-      className={`${bgClass} rounded-lg p-4 mb-3 border border-white/5`}
+      ref={ref}
+      className={`card-enter rounded-xl mb-3 border transition-colors ${borderBg}`}
+      aria-label={`${meta.label}${minute !== null ? ` at minute ${minute}` : ''}`}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span aria-hidden="true" className="text-lg">
-          {icon}
-        </span>
-        <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-          {eventType}
-        </span>
-        {minute !== null && (
-          <time
-            dateTime={`PT${minute}M`}
-            className="text-xs text-text-muted ml-auto"
-            aria-label={`Minute ${minute}`}
-          >
-            {minute}&apos;
-          </time>
+      <div className="px-4 pt-3 pb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-base" aria-hidden="true">{meta.icon}</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+            {meta.label}
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            {minute !== null && (
+              <span className="text-xs font-bold text-text-secondary tabular-nums bg-white/5 px-1.5 py-0.5 rounded">
+                {minute}&apos;
+              </span>
+            )}
+            <span className="text-xs text-text-muted tabular-nums">{formatTimestamp(timestamp)}</span>
+          </div>
+        </div>
+        <p className="text-text-primary text-sm leading-relaxed">{text}</p>
+        {isSponsor && (
+          <p className="mt-2 text-xs text-accent-green/70">Sponsored</p>
         )}
       </div>
-      <p className="text-text-primary text-sm leading-relaxed">{text}</p>
-      {isSponsor && (
-        <div
-          className="mt-2 text-xs text-text-muted"
-          aria-label="Sponsored content"
-        >
-          💡 Sponsored
-        </div>
-      )}
-      <time
-        dateTime={timestamp}
-        className="sr-only"
-      >
-        {new Date(timestamp).toLocaleString()}
-      </time>
     </article>
   );
 }

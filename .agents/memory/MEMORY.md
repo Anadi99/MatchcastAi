@@ -1,0 +1,1 @@
+- [MatchCast AI project](matchcast-project.md) — pnpm workspace with web (Vite+React), mobile (Expo), API (Express), Supabase backend; needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY secrets to show match data.
