@@ -3,12 +3,23 @@ import { createClient } from "@supabase/supabase-js";
 
 const router: IRouter = Router();
 
+function resolveSupabaseUrl(raw: string): string {
+  // If it looks like a full API URL already, use as-is
+  if (/^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(raw)) return raw.replace(/\/$/, "");
+  // Extract project ref from dashboard URLs like:
+  //   https://supabase.com/dashboard/project/<ref>/...
+  const match = raw.match(/\/project\/([a-z0-9]+)/i);
+  if (match) return `https://${match[1]}.supabase.co`;
+  return raw;
+}
+
 function getSupabase() {
-  const url = process.env["SUPABASE_URL"] ?? process.env["NEXT_PUBLIC_SUPABASE_URL"];
+  const rawUrl = process.env["SUPABASE_URL"] ?? process.env["NEXT_PUBLIC_SUPABASE_URL"];
   const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-  if (!url || !key) {
+  if (!rawUrl || !key) {
     throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   }
+  const url = resolveSupabaseUrl(rawUrl);
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
