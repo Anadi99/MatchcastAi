@@ -46,7 +46,8 @@ export function CommentaryItem({ item, index }: Props) {
         {item.minute !== null && (
           <View style={[styles.minuteBadge, { backgroundColor: colors.secondary }]}>
             <Text style={[styles.minuteText, { color: colors.mutedForeground }]}>
-              {item.minute}&apos;
+              {item.minute}{'\''}
+
             </Text>
           </View>
         )}
